@@ -25,7 +25,7 @@ def build_dataset(is_train, args):
 
 
 def build_transform(args):
-    if args.input_size == 225:
+    if args.puzzle_size == 225:
         transform = transforms.Compose([
             transforms.Resize(256, interpolation=PIL.Image.BICUBIC),
             transforms.CenterCrop(224),

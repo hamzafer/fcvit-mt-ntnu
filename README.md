@@ -4,7 +4,7 @@
 
 Garam Kim<sup>a</sup>, Hyeonseong Cho<sup>a</sup> \*, Hyoungsik Nam<sup>a</sup> \*
 
-<sup>a</sup> Department of Information Display, Kyung Hee University
+<sup>a</sup> Kyung Hee University, Republic of Korea
 
 (\*) Corresponding Authors
 
@@ -58,7 +58,7 @@ ESWA 2025
   conda install -c pytorch pytorch torchvision
   pip install timm==0.4.12
   ```
-* (추가할거 체크)
+* (추가할 라이브러리 체크)
 <br>
 
 
@@ -88,8 +88,11 @@ ESWA 2025
 * ```
   python main.py \
   --eval \
+  --resume FCViT_ep100_lr3e-05_b64.pt \
   --model vit_base_patch16_224 \
   --batch_size 16 \
+  --puzzle_size 225 \
+  --fragment_size 75 \
   --data_path ${IMAGENET_DIR}
   ```
 <br>
@@ -97,7 +100,19 @@ ESWA 2025
 
 
 ### Training code
-* 
+* To train FCViT-base on ImageNet on a GPU for 100 epochs run:
+* ```
+  python submitit_finetune.py \
+    --job_dir ${JOB_DIR} \
+    --nodes 4 \
+    --batch_size 32 \
+    --model vit_base_patch16 \
+    --finetune ${PRETRAIN_CHKPT} \
+    --epochs 100 \
+    --blr 5e-4 --layer_decay 0.65 \
+    --weight_decay 0.05 --drop_path 0.1 --reprob 0.25 --mixup 0.8 --cutmix 1.0 \
+    --dist_eval --data_path ${IMAGENET_DIR}
+  ```
 <br>
 
 
