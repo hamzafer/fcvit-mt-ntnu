@@ -6,12 +6,12 @@
 
 import os
 import PIL
+import warnings
 
 from torchvision import datasets, transforms
 
-from timm.data import create_transform
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
+warnings.filterwarnings("ignore")
 
 def build_dataset(is_train, args):
     transform = build_transform(args)
@@ -25,7 +25,7 @@ def build_dataset(is_train, args):
 
 
 def build_transform(args):
-    if args.puzzle_size == 225:
+    if args.size_puzzle == 225:
         transform = transforms.Compose([
             transforms.Resize(256, interpolation=PIL.Image.BICUBIC),
             transforms.CenterCrop(224),

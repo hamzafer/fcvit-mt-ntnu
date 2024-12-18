@@ -86,13 +86,14 @@ ESWA 2025
 ### Evaluation code
 * To evaluate a FCViT-base on ImageNet val with a GPU:
 * ```
-  python main.py \
+  python main_eval.py \
   --eval \
+  --backbone vit_base_patch16_224 \
+  --size_puzzle 225 \
+  --size_fragment 75 \
+  --num_fragment 9 \
+  --batch_size 64 \
   --resume FCViT_ep100_lr3e-05_b64.pt \
-  --model vit_base_patch16_224 \
-  --batch_size 16 \
-  --puzzle_size 225 \
-  --fragment_size 75 \
   --data_path ${IMAGENET_DIR}
   ```
 <br>
