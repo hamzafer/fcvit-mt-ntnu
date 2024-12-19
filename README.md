@@ -93,7 +93,7 @@ ESWA 2025
   --size_fragment 75 \
   --num_fragment 9 \
   --batch_size 64 \
-  --resume FCViT_ep100_lr3e-05_b64.pt \
+  --resume FCViT_base_3x3_ep100_lr3e-05_b64.pt \
   --data_path ${IMAGENET_DIR}
   ```
 <br>
@@ -103,16 +103,17 @@ ESWA 2025
 ### Training code
 * To train FCViT-base on ImageNet on a GPU for 100 epochs run:
 * ```
-  python submitit_finetune.py \
-    --job_dir ${JOB_DIR} \
-    --nodes 4 \
-    --batch_size 32 \
-    --model vit_base_patch16 \
-    --finetune ${PRETRAIN_CHKPT} \
-    --epochs 100 \
-    --blr 5e-4 --layer_decay 0.65 \
-    --weight_decay 0.05 --drop_path 0.1 --reprob 0.25 --mixup 0.8 --cutmix 1.0 \
-    --dist_eval --data_path ${IMAGENET_DIR}
+  python main_train.py \
+  --backbone vit_base_patch16_224 \
+  --size_puzzle 225 \
+  --size_fragment 75 \
+  --num_fragment 9 \
+  --lr 3e-05 \
+  --epochs 100 \
+  --weight_decay 0.05 \
+  --batch_size 64 \
+  --data_path ${IMAGENET_DIR} \
+  --output_dir ${SAVE_DIR}
   ```
 <br>
 
@@ -122,3 +123,4 @@ ESWA 2025
 * This project is currently private and not yet available to the public.
 <br>
 
+### !!!깃 할때 데이터 폴더 지우기!!!

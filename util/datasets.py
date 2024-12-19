@@ -6,12 +6,9 @@
 
 import os
 import PIL
-import warnings
 
 from torchvision import datasets, transforms
 
-
-warnings.filterwarnings("ignore")
 
 def build_dataset(is_train, args):
     transform = build_transform(args)
@@ -27,9 +24,17 @@ def build_dataset(is_train, args):
 def build_transform(args):
     if args.size_puzzle == 225:
         transform = transforms.Compose([
-            transforms.Resize(256, interpolation=PIL.Image.BICUBIC),
+            transforms.Resize(256, interpolation=PIL.Image.BICUBIC, antialias=True),
             transforms.CenterCrop(224),
             transforms.Pad(padding=(0, 0, 1, 1)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        return transform
+    if args.size_puzzle == 224:
+        transform = transforms.Compose([
+            transforms.Resize(256, interpolation=PIL.Image.BICUBIC, antialias=True),
+            transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])

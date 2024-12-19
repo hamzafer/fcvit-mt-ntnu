@@ -45,7 +45,8 @@ def get_args_parser():
 
 
 def main(args):
-    device = torch.device(args.device)
+    # device = torch.device(args.device)
+    device = 'cpu'
 
     seed = args.seed
     torch.manual_seed(seed)
@@ -69,7 +70,7 @@ def main(args):
     model.to(device)
     model.augment_fragment = transforms.Compose([
         transforms.RandomCrop(round(args.size_fragment * 0.85)),
-        transforms.Resize((args.size_fragment, args.size_fragment)),
+        transforms.Resize((args.size_fragment, args.size_fragment), antialias=True),
     ])
     epochs = [0]
     if len(args.resume) == 0:
