@@ -137,11 +137,6 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(f'Training time {total_time_str}')
 
-    '''########################### 여기까지 완료 ###########################'''
-    '''
-    세이브 패스 잘못 됐음 수정 필요
-    '''
-
 
 if __name__ == '__main__':
     args = get_args_parser()

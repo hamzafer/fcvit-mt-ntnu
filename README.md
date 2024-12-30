@@ -17,8 +17,8 @@ ESWA 2025
 ## FCViT: Fragment’s Coordinate prediction Vision Transformer
 * This repository contains PyTorch training code and evaluation code for FCViT.
 * Architecture of FCViT: 
-* [Image private]
-* For details see [Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer (private)]() by Garam Kim, Hyeonseong Cho and Hyoungsik Nam.
+* ![architecture](https://github.com/user-attachments/assets/87ac17a0-2590-4bdc-bb03-a8f1937add0c)
+* For details see [Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer (now still private)]() by Garam Kim, Hyeonseong Cho and Hyoungsik Nam.
 * If you use this code for a paper please cite:
 * ```
   @article{kim25,
@@ -38,6 +38,8 @@ ESWA 2025
 - [x] Data preparation
 - [x] Evaluation code
 - [x] Training code
+- [x] Experimental results
+- [x] License
 <br>
 
 
@@ -58,7 +60,6 @@ ESWA 2025
   conda install -c pytorch pytorch torchvision
   pip install timm==0.4.12
   ```
-* (추가할 라이브러리 체크)
 <br>
 
 
@@ -122,5 +123,3 @@ ESWA 2025
 ### License
 * This project is currently private and not yet available to the public.
 <br>
-
-### !!!깃 할때 데이터 폴더 지우기!!!
