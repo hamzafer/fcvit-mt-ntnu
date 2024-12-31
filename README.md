@@ -38,7 +38,6 @@ ESWA 2025
 - [x] Data preparation
 - [x] Evaluation code
 - [x] Training code
-- [x] Experimental results
 - [x] License
 <br>
 
