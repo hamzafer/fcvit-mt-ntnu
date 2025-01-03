@@ -1,6 +1,8 @@
 # FCViT
 * 비전 트랜스포머 기반 좌표 예측을 통한 직소 퍼즐 풀이
 * ![fcvit 아키텍처](https://github.com/user-attachments/assets/87ac17a0-2590-4bdc-bb03-a8f1937add0c)
+* ImageNet 3x3 퍼즐 시각화
+* ![퍼즐 시각화](https://github.com/user-attachments/assets/8239f58b-772f-4676-8e77-c9fd514a82d9)
 <br>
  
 ## 목차
@@ -105,7 +107,7 @@
   * 기존의 모든 모델들과 비교했을 때 모든 경우에서 FCViT가 가장 우수합니다.
   * 결론적으로 FCViT가 SOTA를 달성했습니다.
 * __실험2: 인코더 교체 평가__
-  * ![table 6](https://github.com/user-attachments/assets/1f1e32d2-8088-4ba6-9ec3-889edaff5d42)
+  * ![table 5](https://github.com/user-attachments/assets/1053cd56-45dc-4694-931e-ac48ea1c9969)
   * 회귀 알고리즘 학습 전략만 사용한 FCCNN은 기존 모델보다 성능이 좋습니다.
   * 이 부분은 `가설 설정 1`이 참임을 뒷받침하는 근거가 됩니다.
   * ViT 인코더를 추가로 사용한 FCViT는 FCCNN에 비해 성능이 더 좋습니다.
