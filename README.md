@@ -18,14 +18,17 @@ ESWA 2025
 * This repository contains PyTorch training code and evaluation code for FCViT.
 * Architecture of FCViT: 
 * ![architecture](https://github.com/user-attachments/assets/87ac17a0-2590-4bdc-bb03-a8f1937add0c)
-* For details see [Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer (now still private)]() by Garam Kim, Hyeonseong Cho and Hyoungsik Nam.
+* For details see [Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer](https://www.sciencedirect.com/science/article/abs/pii/S0957417425003987) by Garam Kim, Hyeonseong Cho and Hyoungsik Nam.
 * If you use this code for a paper please cite:
 * ```
-  @article{kim25,
-    title={Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer},
-    author={Kim, Garam and Cho, Hyeonseong and Nam, Hyoungsik},
-    journal={Expert Systems with Applications},
-    note = {In Review},
+  @article{kim2025solving,
+  title={Solving jigsaw puzzles by predicting fragment’s coordinate based on vision transformer},
+  author={Kim, Garam and Cho, Hyeonseong and Nam, Hyoungsik},
+  journal={Expert Systems with Applications},
+  volume={272},
+  pages={126776},
+  year={2025},
+  publisher={Elsevier}
   }
   ```
 <br>
@@ -119,6 +122,7 @@ ESWA 2025
 
 
 
-### License
-* This project is currently private and not yet available to the public.
+### Acknowledgments
+* Our codebase is mainly based on [JigsawCFN](https://arxiv.org/abs/1603.09246), [MAE](https://arxiv.org/abs/2111.06377), [ViT](https://arxiv.org/abs/2010.11929) and [timm](https://github.com/rwightman/pytorch-image-models).
+* This work was supported by the National Research Foundation of Korea (NRF) funded by the Ministry of Science, ICT & Future Planning (NRF-2019R1F1A1061114) and the Brain Korea 21 Four Program in 2022.
 <br>
