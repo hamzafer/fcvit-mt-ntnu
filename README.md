@@ -1,5 +1,5 @@
 <div align="center">
-<h1>FCViT </h1>
+<h1>FCViT MT NTNU</h1>
 <h3>Solving Jigsaw Puzzles by Predicting Fragment’s Coordinate Based on Vision Transformer</h3>
 
 Garam Kim<sup>a</sup>, Hyeonseong Cho<sup>a</sup> \*, Hyoungsik Nam<sup>a</sup> \*
