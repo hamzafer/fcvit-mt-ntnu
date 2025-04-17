@@ -50,7 +50,10 @@ class FCViT(nn.Module):
         start, end = 0, n
         self.min_dist = (end-start)/n
         self.map_values = list(torch.arange(start, end, self.min_dist))
-        self.map_coord = torch.tensor([(i, j) for i in self.map_values for j in self.map_values])
+        self.map_coord = torch.tensor(
+            [(i, j) for i in self.map_values for j in self.map_values],
+            device=x.device
+        )
 
         coord_shuffles = torch.zeros([N, self.num_fragment, 2])
         coord_restores = torch.zeros([N, self.num_fragment, 2])
@@ -84,7 +87,10 @@ class FCViT(nn.Module):
         start, end = 0, n
         self.min_dist = (end-start)/n
         self.map_values = list(torch.arange(start, end, self.min_dist))
-        self.map_coord = torch.tensor([(i, j) for i in self.map_values for j in self.map_values])
+        self.map_coord = torch.tensor(
+            [(i, j) for i in self.map_values for j in self.map_values],
+            device=x.device
+        )
 
         coord_shuffles = torch.zeros([N, self.num_fragment, 2])
         coord_restores = torch.zeros([N, self.num_fragment, 2])
