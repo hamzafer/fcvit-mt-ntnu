@@ -5,6 +5,7 @@
 
 from tqdm import tqdm
 import torch
+import io, os
 from accelerate import Accelerator
 
 
@@ -115,7 +116,6 @@ def save_model(model, optimizer, scheduler, epochs, losses, accuracies, args):
           f"({size_mb:.1f} MB)")
 
     # force write‑back to disk
-    import io, os
     with open(fpath, "ab") as _f:
         os.fsync(_f.fileno())
 
