@@ -1,94 +1,166 @@
 # References:
-# DeiT: https://github.com/facebookresearch/deit
-# MAE: https://github.com/facebookresearch/mae
+# DeiT  : https://github.com/facebookresearch/deit
+# MAE   : https://github.com/facebookresearch/mae
 # --------------------------------------------------------
 
-
 from tqdm import tqdm
-
 import torch
+from accelerate import Accelerator
 
 
-def training(model, data_loader_train, data_loader_val, device,
-             criterion, optimizer, scheduler,
-             epochs, losses, accuracies,
-             args=None):
+# ----------------------------------------------------------------------
+def training(
+    model,
+    data_loader_train,
+    data_loader_val,
+    accelerator: Accelerator,         # ★ NEW
+    criterion,
+    optimizer,
+    scheduler,
+    epochs,
+    losses,
+    accuracies,
+    args=None,
+):
+    """
+    One full training loop over all epochs.
+
+    All objects are already wrapped by `accelerator.prepare()` in main_train.py.
+    """
     model.train(True)
-    print_freq = 10  # 100
+    print_freq = 10
 
     for epoch in range(args.start_epoch, args.epochs):
-        print(f"epoch {epoch + 1} learning rate : {optimizer.param_groups[0]['lr']}")
-        running_loss = 0.
-        for batch_idx, (inputs, _) in tqdm(enumerate(data_loader_train, 0), total=len(data_loader_train)):
-            inputs = inputs.to(device)
+        if accelerator.is_main_process:
+            lr = optimizer.param_groups[0]["lr"]
+            print(f"Epoch {epoch + 1}  |  learning rate: {lr:.2e}")
 
+        running_loss = 0.0
+
+        for batch_idx, (inputs, _) in tqdm(
+            enumerate(data_loader_train, 0),
+            total=len(data_loader_train),
+            disable=not accelerator.is_local_main_process,
+        ):
             optimizer.zero_grad()
 
             outputs, labels = model(inputs)
             loss = criterion(outputs, labels)
-            loss.backward()
+            accelerator.backward(loss)           # ★ NEW
             optimizer.step()
+
             running_loss += loss.item()
-
-            if batch_idx % print_freq == print_freq - 1:
-                print(f'[Epoch {epoch + 1}] [Batch {batch_idx + 1}] Loss: {running_loss / print_freq:.4f}')
+            if (batch_idx + 1) % print_freq == 0 and accelerator.is_main_process:
+                avg = running_loss / print_freq
+                print(f"[Epoch {epoch + 1}] [Batch {batch_idx + 1}] Loss: {avg:.4f}")
                 epochs.append(epoch + 1)
-                losses.append(running_loss / print_freq)
-                running_loss = 0.
+                losses.append(avg)
+                running_loss = 0.0
+
         scheduler.step()
-        if args.output_dir:
+
+        # save on main process only
+        if args.output_dir and accelerator.is_main_process:
             save_model(
-                model=model, optimizer=optimizer, scheduler=scheduler,
-                epochs=epochs, losses=losses, accuracies=accuracies,
-                args=args
+                model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                epochs=epochs,
+                losses=losses,
+                accuracies=accuracies,
+                args=args,
             )
+
         accuracies = val_model(
-            model=model, data_loader_val=data_loader_val, device=device,
-            accuracies=accuracies, epoch=epoch
+            model=model,
+            data_loader_val=data_loader_val,
+            accelerator=accelerator,            # ★ NEW
+            accuracies=accuracies,
+            epoch=epoch,
         )
-    return {'epoch': epochs[-1], 'loss': losses[-1], 'accuracy': accuracies[-1]}
 
-
-def save_model(model, optimizer, scheduler, epochs, losses, accuracies, args):
-    checkpoint = {
-        'model': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'scheduler': scheduler.state_dict(),
-        'epochs': epochs,
-        'losses': losses,
-        'accuracies': accuracies,
+    return {
+        "epoch": epochs[-1],
+        "loss": losses[-1],
+        "accuracy": accuracies[-1],
     }
-    backbone = args.backbone.split('_')[1]
-    puzzle_type = f'{int(args.num_fragment ** 0.5)}x{int(args.num_fragment ** 0.5)}'
-    model_path = args.output_dir + '/' + f'FCViT_{backbone}_{puzzle_type}_ep{args.epochs}_lr{args.lr:.0e}_b{args.batch_size}.pt'
-    torch.save(checkpoint, model_path)
-    print(f"****** Model checkpoint saved at epochs {epochs[-1]} ******")
 
 
-def val_model(model, data_loader_val, device, accuracies, epoch=-1):
+# ----------------------------------------------------------------------
+def save_model(model, optimizer, scheduler, epochs, losses, accuracies, args):
+    """Save a checkpoint at the *current* epoch (epochs[-1])."""
+    chkpt = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "scheduler": scheduler.state_dict(),
+        "epochs": epochs,
+        "losses": losses,
+        "accuracies": accuracies,
+    }
+
+    backbone = args.backbone.split("_")[1]
+    grid     = int(args.num_fragment ** 0.5)
+    curr_ep  = epochs[-1]
+
+    fname = (
+        f"FCViT_{backbone}_{grid}x{grid}"
+        f"_ep{curr_ep:03d}_lr{args.lr:.0e}_b{args.batch_size}.pt"
+    )
+    fpath = os.path.join(args.output_dir, fname)
+
+    torch.save(chkpt, fpath)
+    # ---- logging -----------------------------------------------------
+    size_mb = os.path.getsize(fpath) / (1024 ** 2)
+    print(f"[🪄 save_model] Epoch {curr_ep:03d}  |  checkpoint → {fpath}  "
+          f"({size_mb:.1f} MB)")
+
+    # force write‑back to disk
+    import io, os
+    with open(fpath, "ab") as _f:
+        os.fsync(_f.fileno())
+
+
+# ----------------------------------------------------------------------
+@torch.no_grad()
+def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoch=-1):
     model.eval()
 
-    total = 0
-    correct = 0
-    correct_puzzle = 0
-    num_fragment = 0
-    with torch.no_grad():
-        for batch_idx, (inputs, _) in tqdm(enumerate(data_loader_val, 0), total=len(data_loader_val)):
-            inputs = inputs.to(device)
+    total, correct, correct_puzzle, num_fragment = 0, 0, 0, 0
 
-            outputs, labels = model(inputs)
+    for _, (inputs, _) in tqdm(
+        enumerate(data_loader_val, 0),
+        total=len(data_loader_val),
+        disable=not accelerator.is_local_main_process,
+    ):
+        outputs, labels = model(inputs)
 
-            pred = outputs
-            num_fragment = labels.size(1)
-            total += labels.size(0)
-            pred_ = model.mapping(pred)
-            labels_ = model.mapping(labels)
-            correct += (pred_ == labels_).all(dim=2).sum().item()
-            correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
+        pred = outputs
+        num_fragment = labels.size(1)
+        total += labels.size(0)
 
-    acc_fragment = 100 * correct / (total * num_fragment)
-    acc_puzzle = 100 * correct_puzzle / (total)
-    print(f'[Epoch {epoch + 1}] Accuracy (Fragment-level) on the test set: {acc_fragment:.2f}%')
-    print(f'[Epoch {epoch + 1}] Accuracy (Puzzle-level) on the test set: {acc_puzzle:.2f}%')
-    accuracies.append(acc_fragment)
+        pred_ = model.mapping(pred)
+        labels_ = model.mapping(labels)
+        correct += (pred_ == labels_).all(dim=2).sum().item()
+        correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
+
+    # ---- gather stats across all processes --------------------------------
+    total_tensor        = torch.tensor(total,          device=accelerator.device)
+    correct_tensor      = torch.tensor(correct,        device=accelerator.device)
+    correct_puzzle_tensor = torch.tensor(correct_puzzle, device=accelerator.device)
+
+    gathered_total   = accelerator.gather(total_tensor).sum()
+    gathered_corr    = accelerator.gather(correct_tensor).sum()
+    gathered_corr_p  = accelerator.gather(correct_puzzle_tensor).sum()
+
+    acc_fragment = 100 * gathered_corr / (gathered_total * num_fragment)
+    acc_puzzle   = 100 * gathered_corr_p / gathered_total
+
+    if accelerator.is_main_process:
+        print(
+            f"[Epoch {epoch + 1}] Fragment‑acc: {acc_fragment:.2f}%   "
+            f"Puzzle‑acc: {acc_puzzle:.2f}%"
+        )
+
+    accuracies.append(acc_fragment.item())
+    model.train(True)   # switch back to train mode
     return accuracies
