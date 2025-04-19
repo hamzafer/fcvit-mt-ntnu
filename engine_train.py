@@ -124,6 +124,7 @@ def save_model(model, optimizer, scheduler, epochs, losses, accuracies, args):
 @torch.no_grad()
 def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoch=-1):
     model.eval()
+    base_model = accelerator.unwrap_model(model)   # ★ NEW
 
     total, correct, correct_puzzle, num_fragment = 0, 0, 0, 0
 
@@ -138,8 +139,8 @@ def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoc
         num_fragment = labels.size(1)
         total += labels.size(0)
 
-        pred_ = model.mapping(pred)
-        labels_ = model.mapping(labels)
+        pred_   = base_model.mapping(pred)   # ★ CHANGED
+        labels_ = base_model.mapping(labels) # ★ CHANGED
         correct += (pred_ == labels_).all(dim=2).sum().item()
         correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
 
