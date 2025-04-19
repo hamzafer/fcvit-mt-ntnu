@@ -22,6 +22,8 @@ from puzzle_fcvit import FCViT
 
 from engine_train import training
 
+from torchvision.datasets import FakeData
+from torchvision import transforms
 
 # ----------------------------------------------------------------------
 # argument parser
@@ -54,6 +56,9 @@ def get_args_parser():
     parser.add_argument("--data_path", default="./data/ImageNet/", type=str)
     parser.add_argument("--output_dir", default="./save", type=str)
 
+    parser.add_argument("--smoke_test", action="store_true",
+                        help="Run a 1‑epoch, 2‑GPU, synthetic‑data test")
+
     return parser
 
 
@@ -73,7 +78,24 @@ def main(args):
     np.random.seed(args.seed)
 
     # ── datasets & dataloaders ────────────────────────────────────────
-    dataset_train = build_dataset(is_train=True, args=args)
+    if args.smoke_test:
+        fake_transform = transforms.Compose([
+            transforms.Resize((args.size_puzzle, args.size_puzzle)),
+            transforms.ToTensor(),
+        ])
+        dataset_train = FakeData(
+            size=512, image_size=(3, args.size_puzzle, args.size_puzzle),
+            num_classes=1000, transform=fake_transform
+        )
+    else:
+        dataset_train = build_dataset(is_train=True, args=args)
+
+    # small validation split (10 %) or reuse train set in smoke‑test
+    if args.smoke_test:                               # ★ NEW
+        dataset_val = dataset_train                   # ★ NEW
+    else:                                             # ★ NEW
+        dataset_val = Subset(dataset_train, list(range(int(0.1 * len(dataset_train)))))  # ★ MOVED
+
     data_loader_train = DataLoader(
         dataset_train,
         batch_size=args.batch_size,
@@ -81,9 +103,6 @@ def main(args):
         num_workers=args.num_workers,
         drop_last=True,
     )
-
-    # small validation split (10 %)
-    dataset_val = Subset(dataset_train, list(range(int(0.1 * len(dataset_train)))))
     data_loader_val = DataLoader(
         dataset_val,
         batch_size=args.batch_size,
@@ -159,6 +178,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(parents=[get_args_parser()])
     args = parser.parse_args()
+
+    if args.smoke_test:          # ★ NEW
+        args.epochs = 1          # ★ NEW
+        args.batch_size = 8      # ★ NEW
 
     if args.output_dir and Accelerator().is_main_process:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
