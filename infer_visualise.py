@@ -44,7 +44,7 @@ log(f"Image root        : {IMG_ROOT}")
 log(f"Device            : {device}")
 
 # ---------- load model ----------
-ckpt  = torch.load(CKPT_PATH, map_location="cpu")
+ckpt = torch.load(CKPT_PATH, map_location="cpu", weights_only=True)
 state = {k.replace("module.", "", 1): v for k, v in ckpt["model"].items()}  # strip DDP prefix
 
 model = FCViT(backbone=BACKBONE, num_fragment=NUM_FRAG, size_fragment=FRAG_SIZE).to(device)
