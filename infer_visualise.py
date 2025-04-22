@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from PIL import Image
 from puzzle_fcvit import FCViT
+from datetime import datetime
 
 # ---------- paths ----------
 ckpt_path = "/cluster/home/muhamhz/fcvit-mt-ntnu/output_fcvit_h100_normal/FCViT_base_3x3_ep100_lr3e-05_b64.pt"
@@ -70,17 +71,27 @@ for i, (img, ord_pred, ord_gt) in enumerate(zip(imgs_cpu, pred_cpu, tgt_cpu)):
     ord_pred_i = mask_pred.argmax(dim=1)
     ord_gt_i   = mask_gt.argmax(dim=1)
 
+    # column 1 – ORIGINAL (ground‑truth order)
     plt.subplot(N, 3, 3*i+1)
-    plt.imshow(img.permute(1, 2, 0)); plt.axis('off'); plt.title("Original")
+    plt.imshow(unshuffle(img, ord_gt_i).permute(1, 2, 0))
+    plt.axis('off'); plt.title("Original")
 
+    # column 2 – SHUFFLED input
     plt.subplot(N, 3, 3*i+2)
-    plt.imshow(unshuffle(img, ord_gt_i).permute(1, 2, 0)); plt.axis('off'); plt.title("Shuffled")
+    plt.imshow(img.permute(1, 2, 0))
+    plt.axis('off'); plt.title("Shuffled")
 
+    # column 3 – MODEL reconstruction
     plt.subplot(N, 3, 3*i+3)
-    plt.imshow(unshuffle(img, ord_pred_i).permute(1, 2, 0)); plt.axis('off'); plt.title("Reconstruction")
+    plt.imshow(unshuffle(img, ord_pred_i).permute(1, 2, 0))
+    plt.axis('off'); plt.title("Reconstruction")
 
 plt.tight_layout()
-out_png = "recon_vis.png"
-plt.savefig(out_png, dpi=200)
+
+results_dir = pathlib.Path(__file__).resolve().parent / "results"
+results_dir.mkdir(exist_ok=True)
+out_png = results_dir / f"recon_vis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+plt.savefig(out_png, dpi=600)
 print("Saved figure to", out_png)
 plt.show()
