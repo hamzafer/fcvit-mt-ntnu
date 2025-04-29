@@ -45,8 +45,8 @@ def get_args_parser():
 
 
 def main(args):
-    # device = torch.device(args.device)
-    device = 'cpu'
+    device = torch.device(args.device)
+    # device = 'cpu'
 
     seed = args.seed
     torch.manual_seed(seed)
@@ -79,9 +79,11 @@ def main(args):
         print(f'WARNING: The model is untrained.')
         print(f'WARNING: You need to check resume of args.')
     else:
-        checkpoint = torch.load(args.resume)
+        checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True)
         epochs = checkpoint['epochs']
-        model.load_state_dict(checkpoint['model'])
+        clean_state = {k.replace('module.', '', 1): v
+                    for k, v in checkpoint['model'].items()}
+        model.load_state_dict(clean_state, strict=True)
         print(f'Parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
         print(f'Epoch: {epochs[-1]}')
 

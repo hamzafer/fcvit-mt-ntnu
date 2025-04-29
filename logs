@@ -1,0 +1,37 @@
+(/cluster/home/muhamhz/fcvit_env) [muhamhz@idun-login1 fcvit-mt-ntnu]$ python main_eval.py   --eval   --device cuda   --backbone vit_base_patch16_224   --size_puzzle 225   --size_fragment 75   --num_fragment 9   --batch_size 256   --data_path /cluster/home/muhamhz/data/imagenet   --resume /cluster/home/muhamhz/fcvit-mt-ntnu/output_fcvit_h100_normal/FCViT_base_3x3_ep100_lr3e-05_b64.pt
+Dataset ImageFolder
+    Number of datapoints: 50000
+    Root location: /cluster/home/muhamhz/data/imagenet/val
+    StandardTransform
+Transform: Compose(
+               Resize(size=256, interpolation=bicubic, max_size=None, antialias=True)
+               CenterCrop(size=(224, 224))
+               Pad(padding=(0, 0, 1, 1), fill=0, padding_mode=constant)
+               ToTensor()
+               Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+           )
+Parameter: 87586674
+Epoch: 100
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 195/195 [12:32<00:00,  3.86s/it]
+Accuracy (Fragment-level) of the network on the 50000 test images: 83.70%
+Accuracy (Puzzle-level) of the network on the 50000 test images: 66.84%
+(/cluster/home/muhamhz/fcvit_env) [muhamhz@idun-login1 fcvit-mt-ntnu]$ python main_eval.py   --eval   --device cuda:1   --backbone vit_base_patch16_224   --size_puzzle 22
+5   --size_fragment 75   --num_fragment 9   --batch_size 256   --data_path /cluster/home/muhamhz/data/imagenet   --resume /cluster/home/muhamhz/fcvit-mt-ntnu/output_fcvit
+_h100_normal/FCViT_base_3x3_ep095_lr3e-05_b64.pt
+Dataset ImageFolder
+    Number of datapoints: 50000
+    Root location: /cluster/home/muhamhz/data/imagenet/val
+    StandardTransform
+Transform: Compose(
+               Resize(size=256, interpolation=bicubic, max_size=None, antialias=True)
+               CenterCrop(size=(224, 224))
+               Pad(padding=(0, 0, 1, 1), fill=0, padding_mode=constant)
+               ToTensor()
+               Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+           )
+Parameter: 87586674
+Epoch: 95
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 195/195 [10:41<00:00,  3.29s/it]
+Accuracy (Fragment-level) of the network on the 50000 test images: 83.66%
+Accuracy (Puzzle-level) of the network on the 50000 test images: 66.83%
+(/cluster/home/muhamhz/fcvit_env) [muhamhz@idun-login1 fcvit-mt-ntnu]$ 
