@@ -7,6 +7,7 @@
 #     --resume /cluster/home/muhamhz/fcvit-mt-ntnu/checkpoint/FCViT_base_3x3_ep100_lr3e-05_b64.pt
 # --------------------------------------------------------
 
+import os
 import math
 from tqdm import tqdm
 import torch
@@ -27,6 +28,11 @@ def evaluate(data_loader, model, device, verbose=True):
     correct = 0
     correct_puzzle = 0
     num_fragment = 0
+
+    # If your dataset is a torchvision ImageFolder (or similar),
+    # it will have a .samples or .imgs attribute listing (path, class) tuples.
+    file_list = getattr(data_loader.dataset, 'samples', None) or \
+                getattr(data_loader.dataset, 'imgs', None)
 
     with torch.no_grad():
         for batch_idx, (inputs, _) in tqdm(enumerate(data_loader, 0), total=len(data_loader)):
@@ -55,6 +61,13 @@ def evaluate(data_loader, model, device, verbose=True):
             if verbose and batch_idx < 3:
                 print(f"\n----- Batch {batch_idx} -----")
                 for i in range(min(2, batch_size)):
+                    # figure out the filename
+                    if file_list is not None:
+                        global_idx = batch_idx * data_loader.batch_size + i
+                        img_path   = file_list[global_idx][0]
+                        img_name   = os.path.basename(img_path)
+                        print(f"  Image: {img_name}")
+
                     orig  = labels_simple[i].cpu().tolist()
                     pr    = pred_simple[i].cpu().tolist()
                     match = [p == l for p, l in zip(pr, orig)]
@@ -64,11 +77,12 @@ def evaluate(data_loader, model, device, verbose=True):
                     print(f"  Correct fragments:     {match}")
                     print(f"  All fragments correct: {all(match)}")
 
-            # print running accuracies *every* batch
+            # print running accuracies every batch
             running_frag_acc   = 100 * correct / (total * num_fragment)
             running_puzzle_acc = 100 * correct_puzzle / total
-            print(f"After batch {batch_idx}: Running fragment accuracy: {running_frag_acc:.2f}%, "
-                  f"puzzle accuracy: {running_puzzle_acc:.2f}%")
+            print(f"After batch {batch_idx}: "
+                  f"Fragment acc {running_frag_acc:.2f}%, "
+                  f"Puzzle acc {running_puzzle_acc:.2f}%")
 
     # final results
     acc_fragment = 100 * correct / (total * num_fragment)
