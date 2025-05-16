@@ -5,6 +5,9 @@
 #     --size_puzzle 225 --size_fragment 75 --num_fragment 9 --batch_size 256 \
 #     --data_path /cluster/home/muhamhz/data/imagenet \
 #     --resume /cluster/home/muhamhz/fcvit-mt-ntnu/checkpoint/FCViT_base_3x3_ep100_lr3e-05_b64.pt
+
+# Evaluation Puzzle Accuracy: 66.84%​
+# Evaluation Fragment Accuracy: 83.70%
 # --------------------------------------------------------
 
 import os
