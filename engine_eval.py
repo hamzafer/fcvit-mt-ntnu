@@ -1,6 +1,7 @@
 # References:
 # DeiT: https://github.com/facebookresearch/deit
 # MAE: https://github.com/facebookresearch/mae
+# python main_eval.py --eval --device cuda:1 --backbone vit_base_patch16_224 --size_puzzle 225 --size_fragment 75 --num_fragment 9 --batch_size 256 --data_path /cluster/home/muhamhz/data/imagenet --resume /cluster/home/muhamhz/fcvit-mt-ntnu/checkpoint/FCViT_base_3x3_ep100_lr3e-05_b64.pt
 # --------------------------------------------------------
 
 
