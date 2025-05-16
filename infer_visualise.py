@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# infer_visualise_log.py
+# infer_visualise.py
 #
 # • saves a figure + a plain‑text log for each run
 # • all tunable parameters are grouped at the top
