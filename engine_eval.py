@@ -40,8 +40,9 @@ def evaluate(data_loader, model, device, verbose=True):
             pred_   = model.mapping(pred)   # [B, num_fragment, 2]
             labels_ = model.mapping(labels) # [B, num_fragment, 2]
 
-            # metrics
-            total += labels_.size(0)
+            # update metrics
+            batch_size = labels_.size(0)
+            total += batch_size
             correct += (pred_ == labels_).all(dim=2).sum().item()
             correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
 
@@ -50,9 +51,10 @@ def evaluate(data_loader, model, device, verbose=True):
             pred_simple   = simple_map(pred_,   grid_size)  # [B, num_fragment]
             labels_simple = simple_map(labels_, grid_size)  # [B, num_fragment]
 
+            # print details for first few batches
             if verbose and batch_idx < 3:
                 print(f"\n----- Batch {batch_idx} -----")
-                for i in range(min(2, labels_simple.size(0))):
+                for i in range(min(2, batch_size)):
                     orig  = labels_simple[i].cpu().tolist()
                     pr    = pred_simple[i].cpu().tolist()
                     match = [p == l for p, l in zip(pr, orig)]
@@ -62,6 +64,13 @@ def evaluate(data_loader, model, device, verbose=True):
                     print(f"  Correct fragments:     {match}")
                     print(f"  All fragments correct: {all(match)}")
 
+            # print running accuracies *every* batch
+            running_frag_acc   = 100 * correct / (total * num_fragment)
+            running_puzzle_acc = 100 * correct_puzzle / total
+            print(f"After batch {batch_idx}: Running fragment accuracy: {running_frag_acc:.2f}%, "
+                  f"puzzle accuracy: {running_puzzle_acc:.2f}%")
+
+    # final results
     acc_fragment = 100 * correct / (total * num_fragment)
     acc_puzzle   = 100 * correct_puzzle / total
 
