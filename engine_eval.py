@@ -58,7 +58,7 @@ def evaluate(data_loader, model, device, verbose=True):
             labels_simple = simple_map(labels_, grid_size)  # [B, num_fragment]
 
             # print details for first few batches
-            if verbose and batch_idx < 3:
+            if verbose and batch_idx < 10:
                 print(f"\n----- Batch {batch_idx} -----")
                 for i in range(min(2, batch_size)):
                     # figure out the filename

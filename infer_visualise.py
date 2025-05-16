@@ -99,6 +99,10 @@ for i, (img, ord_pred, ord_gt) in enumerate(zip(imgs_cpu, pred_cpu, tgt_cpu)):
     ord_pred_i = mask_pred.argmax(dim=1)
     ord_gt_i   = mask_gt.argmax(dim=1)
 
+    print(f"Image {i+1}:")
+    print(f"  Ground Truth Order: {ord_gt_i.tolist()}")
+    print(f"  Predicted Order   : {ord_pred_i.tolist()}")
+
     # column 1 – ORIGINAL
     plt.subplot(N_IMAGES, 3, 3*i+1)
     plt.imshow(unshuffle(img, ord_gt_i).permute(1, 2, 0))
