@@ -13,7 +13,7 @@ from puzzle_fcvit import FCViT
 
 
 # ────────────────────────────── CONFIG ────────────────────────────── #
-CKPT_PATH   = "/cluster/home/muhamhz/fcvit-mt-ntnu/output_fcvit_h100_normal/FCViT_base_3x3_ep100_lr3e-05_b64.pt"
+CKPT_PATH   = "/cluster/home/muhamhz/fcvit-mt-ntnu/checkpoint/FCViT_base_3x3_ep100_lr3e-05_b64.pt"
 IMG_ROOT    = "/cluster/home/muhamhz/data/imagenet/val"
 N_IMAGES    = 4                      # how many images to visualise
 BATCH_SIZE  = N_IMAGES               # one pass – no dataloader
