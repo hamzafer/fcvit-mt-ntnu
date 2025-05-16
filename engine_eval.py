@@ -10,7 +10,7 @@ import torch
 
 
 @torch.no_grad()
-def evaluate(data_loader, model, device):
+def evaluate(data_loader, model, device, verbose=True):
     model.eval()
 
     total = 0
@@ -30,8 +30,27 @@ def evaluate(data_loader, model, device):
             labels_ = model.mapping(labels)
             correct += (pred_ == labels_).all(dim=2).sum().item()
             correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
+            
+            # Print sample results for the first few batches
+            if verbose and batch_idx < 3:
+                print(f"\n----- Batch {batch_idx} -----")
+                # Show results for up to 2 samples in the batch
+                for i in range(min(2, labels.size(0))):
+                    print(f"Sample {i}:")
+                    print(f"  Original order: {labels_[i].cpu().tolist()}")
+                    print(f"  Predicted order: {pred_[i].cpu().tolist()}")
+                    match = (pred_[i] == labels_[i]).all(dim=1).cpu().tolist()
+                    print(f"  Correct fragments: {match}")
+                    print(f"  All fragments correct: {all(match)}")
 
     acc_fragment = 100 * correct / (total * num_fragment)
     acc_puzzle = 100 * correct_puzzle / (total)
+    
+    # Print final results
+    print("\n===== Evaluation Results =====")
+    print(f"Fragment Accuracy: {acc_fragment:.2f}%")
+    print(f"Puzzle Accuracy: {acc_puzzle:.2f}%")
+    print(f"Total samples evaluated: {total}")
+    print("==============================\n")
 
     return {'acc_fragment': acc_fragment, 'acc_puzzle': acc_puzzle}
