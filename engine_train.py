@@ -15,6 +15,7 @@ def training(model, data_loader_train, data_loader_val, device,
              args=None):
     model.train(True)
     print_freq = 10  # 100
+    save_freq = 10   # Save checkpoint every 10 epochs
 
     for epoch in range(args.start_epoch, args.epochs):
         print(f"epoch {epoch + 1} learning rate : {optimizer.param_groups[0]['lr']}")
@@ -37,11 +38,13 @@ def training(model, data_loader_train, data_loader_val, device,
                 running_loss = 0.
         scheduler.step()
         if args.output_dir:
-            save_model(
-                model=model, optimizer=optimizer, scheduler=scheduler,
-                epochs=epochs, losses=losses, accuracies=accuracies,
-                args=args
-            )
+            # save only every save_freq epochs or at the last epoch
+            if (epoch + 1) % save_freq == 0 or (epoch + 1) == args.epochs:
+                save_model(
+                    model=model, optimizer=optimizer, scheduler=scheduler,
+                    epochs=epochs, losses=losses, accuracies=accuracies,
+                    args=args
+                )
         accuracies = val_model(
             model=model, data_loader_val=data_loader_val, device=device,
             accuracies=accuracies, epoch=epoch
