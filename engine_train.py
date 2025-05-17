@@ -60,8 +60,13 @@ def training(
 
         scheduler.step()
 
-        # save on main process only
-        if args.output_dir and accelerator.is_main_process:
+        # save only every N epochs or at the last epoch
+        N = 20  # Change this to your preferred interval
+        if (
+            args.output_dir
+            and accelerator.is_main_process
+            and ((epoch + 1) % N == 0 or (epoch + 1) == args.epochs)
+        ):
             save_model(
                 model=model,
                 optimizer=optimizer,
