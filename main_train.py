@@ -91,6 +91,9 @@ def main(args):
         num_fragment=args.num_fragment,
         size_fragment=args.size_fragment
     )
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+
     model.to(device)
     criterion = nn.SmoothL1Loss()
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
