@@ -9,3 +9,5 @@ dependencies:
   - pip
   - pip:
       - timm==0.4.12
+      - tqdm
+      - torchsummary
