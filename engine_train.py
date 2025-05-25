@@ -84,8 +84,8 @@ def val_model(model, data_loader_val, device, accuracies, epoch=-1):
             pred = outputs
             num_fragment = labels.size(1)
             total += labels.size(0)
-            pred_ = model.mapping(pred)
-            labels_ = model.mapping(labels)
+            pred_ = pred
+            labels_ = labels
             correct += (pred_ == labels_).all(dim=2).sum().item()
             correct_puzzle += (pred_ == labels_).all(dim=2).all(dim=1).sum().item()
 
