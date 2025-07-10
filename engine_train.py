@@ -32,6 +32,9 @@ def training(
     """
     model.train(True)
     print_freq = 10
+    wandb_log_freq = 50  # Log to wandb every 50 steps
+    
+    global_step = 0  # Track global training steps across all epochs
 
     for epoch in range(args.start_epoch, args.epochs):
         epoch_start_time = time.time()
@@ -43,6 +46,7 @@ def training(
         running_loss = 0.0
         epoch_loss = 0.0
         num_batches = 0
+        step_losses = []  # Track losses for wandb step logging
 
         for batch_idx, (inputs, _) in tqdm(
             enumerate(data_loader_train, 0),
@@ -56,16 +60,37 @@ def training(
             accelerator.backward(loss)           # ★ NEW
             optimizer.step()
 
-            running_loss += loss.item()
-            epoch_loss += loss.item()
+            current_loss = loss.item()
+            running_loss += current_loss
+            epoch_loss += current_loss
             num_batches += 1
+            global_step += 1
+            step_losses.append(current_loss)
             
+            # Console logging every print_freq steps
             if (batch_idx + 1) % print_freq == 0 and accelerator.is_main_process:
                 avg = running_loss / print_freq
                 print(f"[Epoch {epoch + 1}] [Batch {batch_idx + 1}] Loss: {avg:.4f}")
                 epochs.append(epoch + 1)
                 losses.append(avg)
                 running_loss = 0.0
+
+            # WandB step-wise logging
+            if (global_step % wandb_log_freq == 0 and 
+                not args.disable_wandb and 
+                accelerator.is_main_process):
+                
+                # Calculate moving average of recent losses
+                recent_losses = step_losses[-min(wandb_log_freq, len(step_losses)):]
+                avg_recent_loss = sum(recent_losses) / len(recent_losses)
+                
+                wandb.log({
+                    "train/step_loss": current_loss,
+                    "train/step_loss_smooth": avg_recent_loss,
+                    "train/learning_rate": optimizer.param_groups[0]['lr'],
+                    "train/global_step": global_step,
+                    "train/epoch": epoch + 1,
+                }, step=global_step)
 
         scheduler.step()
 
@@ -105,15 +130,15 @@ def training(
         # Get current accuracy (last added to the list)
         current_accuracy = accuracies[-1] if accuracies else 0.0
 
-        # Log to wandb
+        # Epoch-wise logging to wandb
         if not args.disable_wandb and accelerator.is_main_process:
             wandb.log({
-                "epoch": epoch + 1,
-                "train/loss": avg_epoch_loss,
-                "val/fragment_accuracy": current_accuracy,
-                "learning_rate": scheduler.get_last_lr()[0] if scheduler else optimizer.param_groups[0]['lr'],
-                "epoch_time": epoch_time
-            })
+                "epoch/train_loss": avg_epoch_loss,
+                "epoch/val_fragment_accuracy": current_accuracy,
+                "epoch/learning_rate": scheduler.get_last_lr()[0] if scheduler else optimizer.param_groups[0]['lr'],
+                "epoch/epoch_time": epoch_time,
+                "epoch/epoch_number": epoch + 1,
+            }, step=global_step)
 
     return {
         "epoch": epochs[-1],
