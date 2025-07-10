@@ -6,15 +6,34 @@
 
 import os
 import PIL
+from PIL import Image
 
 from torchvision import datasets, transforms
+
+# Fix PIL decompression bomb error
+Image.MAX_IMAGE_PIXELS = None
+
+class SafeImageFolder(datasets.ImageFolder):
+    """ImageFolder with safe loading for large images"""
+    
+    def loader(self, path):
+        with open(path, 'rb') as f:
+            img = Image.open(f)
+            img = img.convert('RGB')
+            
+            # Resize very large images
+            max_size = (2048, 2048)
+            if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+                print(f"Resizing image {path} from {img.size} to {max_size}")
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            return img
 
 
 def build_dataset(is_train, args):
     transform = build_transform(args)
 
     root = os.path.join(args.data_path, 'train' if is_train else 'val')
-    dataset = datasets.ImageFolder(root, transform=transform)
+    dataset = SafeImageFolder(root, transform=transform)
 
     print(dataset)
 
