@@ -16,6 +16,7 @@ import torch.optim as optim
 from accelerate import Accelerator                     # ★ NEW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Subset
+import wandb
 
 from util.datasets import build_dataset
 from puzzle_fcvit import FCViT
@@ -59,6 +60,14 @@ def get_args_parser():
     parser.add_argument("--smoke_test", action="store_true",
                         help="Run a 1‑epoch, 2‑GPU, synthetic‑data test")
 
+    # WandB parameters
+    parser.add_argument("--wandb_offline", action="store_true",
+                        help="Run wandb in offline mode")
+    parser.add_argument("--wandb_run_name", default=None, type=str,
+                        help="wandb run name (auto-generated if not provided)")
+    parser.add_argument("--disable_wandb", action="store_true",
+                        help="Disable wandb logging entirely")
+
     return parser
 
 
@@ -72,6 +81,62 @@ def main(args):
     # ── Accelerate initialisation ─────────────────────────────────────
     accelerator = Accelerator()                      # ★ NEW
     device = accelerator.device                      # ★ NEW
+
+    # ── Initialize wandb ──────────────────────────────────────────────
+    if not args.disable_wandb and accelerator.is_main_process:
+        # Set wandb mode
+        wandb_mode = "offline" if args.wandb_offline else "online"
+        
+        # Create run name if not provided
+        if args.wandb_run_name is None:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Extract dataset name from data_path
+            dataset_name = "unknown"
+            if args.data_path:
+                if "imagenet" in args.data_path.lower():
+                    dataset_name = "imagenet"
+                elif "coco" in args.data_path.lower():
+                    dataset_name = "coco"
+                elif "places" in args.data_path.lower():
+                    dataset_name = "places"
+                elif "fake" in args.data_path.lower() or args.smoke_test:
+                    dataset_name = "fake"
+                else:
+                    # Extract last folder name as dataset name
+                    dataset_name = os.path.basename(args.data_path.rstrip('/'))
+            
+            if args.smoke_test:
+                dataset_name = "smoke_test"
+            
+            # Create descriptive run name
+            backbone_short = args.backbone.replace("vit_", "").replace("_patch16_224", "")
+            fragments_str = f"{args.num_fragment}frag"
+            puzzle_size = f"{args.size_puzzle}px"
+            batch_lr = f"bs{args.batch_size}_lr{args.lr}"
+            
+            args.wandb_run_name = f"{dataset_name}_{backbone_short}_{fragments_str}_{puzzle_size}_{batch_lr}_{timestamp}"
+        
+        # Initialize wandb with your project
+        wandb_run = wandb.init(
+            project="fcvit",
+            entity="hamzafer3-ntnu",
+            name=args.wandb_run_name,
+            config=vars(args),
+            mode=wandb_mode,
+            tags=[
+                args.backbone, 
+                f"{args.num_fragment}fragments", 
+                "jigsaw-puzzle",
+                dataset_name,
+                "smoke-test" if args.smoke_test else "full-training"
+            ]
+        )
+        
+        print(f"WandB initialized in {wandb_mode} mode")
+        print(f"Run name: {args.wandb_run_name}")
+        print(f"Project: https://wandb.ai/hamzafer3-ntnu/fcvit")
+        print(f"Direct run link: https://wandb.ai/hamzafer3-ntnu/fcvit/runs/{wandb_run.id}")
 
     # deterministic seed
     torch.manual_seed(args.seed)
@@ -90,7 +155,7 @@ def main(args):
     else:
         dataset_train = build_dataset(is_train=True, args=args)
 
-    # small validation split (10 %) or reuse train set in smoke‑test
+    # small validation split (10 %) or reuse train set in smoke‑test
     if args.smoke_test:                               # ★ NEW
         dataset_val = dataset_train                   # ★ NEW
     else:                                             # ★ NEW
@@ -172,6 +237,16 @@ def main(args):
         )
         total_time = time.time() - start_time
         print("Training time:", str(datetime.timedelta(seconds=int(total_time))))
+        
+        # Log final results to wandb
+        if not args.disable_wandb:
+            wandb.log({
+                "final/total_training_time": total_time,
+                "final/final_loss": train_stats['loss'],
+                "final/final_accuracy": train_stats['accuracy'],
+                "final/total_epochs": train_stats['epoch']
+            })
+            wandb.finish()
 
 
 # ----------------------------------------------------------------------

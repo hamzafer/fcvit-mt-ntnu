@@ -13,7 +13,7 @@ module load CUDA/12.4.0
 
 # Try activating environment
 echo ">>> Trying to activate conda environment..."
-conda activate /cluster/home/muhamhz/fcvit_env || echo "Conda activate failed"
+conda activate /cluster/home/akmarala/fcvit_env || echo "Conda activate failed"
 
 # Final confirmation
 echo ">>> Python version:"

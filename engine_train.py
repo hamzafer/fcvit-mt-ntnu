@@ -6,7 +6,9 @@
 from tqdm import tqdm
 import torch
 import io, os
+import time
 from accelerate import Accelerator
+import wandb
 
 
 # ----------------------------------------------------------------------
@@ -32,11 +34,15 @@ def training(
     print_freq = 10
 
     for epoch in range(args.start_epoch, args.epochs):
+        epoch_start_time = time.time()
+        
         if accelerator.is_main_process:
             lr = optimizer.param_groups[0]["lr"]
             print(f"Epoch {epoch + 1}  |  learning rate: {lr:.2e}")
 
         running_loss = 0.0
+        epoch_loss = 0.0
+        num_batches = 0
 
         for batch_idx, (inputs, _) in tqdm(
             enumerate(data_loader_train, 0),
@@ -51,6 +57,9 @@ def training(
             optimizer.step()
 
             running_loss += loss.item()
+            epoch_loss += loss.item()
+            num_batches += 1
+            
             if (batch_idx + 1) % print_freq == 0 and accelerator.is_main_process:
                 avg = running_loss / print_freq
                 print(f"[Epoch {epoch + 1}] [Batch {batch_idx + 1}] Loss: {avg:.4f}")
@@ -59,6 +68,9 @@ def training(
                 running_loss = 0.0
 
         scheduler.step()
+
+        # Calculate average epoch loss
+        avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else 0.0
 
         # save only every N epochs or at the last epoch
         N = 20  # Change this to your preferred interval
@@ -77,13 +89,31 @@ def training(
                 args=args,
             )
 
+        # Run validation and get accuracies
         accuracies = val_model(
             model=model,
             data_loader_val=data_loader_val,
             accelerator=accelerator,            # ★ NEW
             accuracies=accuracies,
             epoch=epoch,
+            args=args,  # ★ ADD THIS
         )
+
+        # Calculate epoch time
+        epoch_time = time.time() - epoch_start_time
+        
+        # Get current accuracy (last added to the list)
+        current_accuracy = accuracies[-1] if accuracies else 0.0
+
+        # Log to wandb
+        if not args.disable_wandb and accelerator.is_main_process:
+            wandb.log({
+                "epoch": epoch + 1,
+                "train/loss": avg_epoch_loss,
+                "val/fragment_accuracy": current_accuracy,
+                "learning_rate": scheduler.get_last_lr()[0] if scheduler else optimizer.param_groups[0]['lr'],
+                "epoch_time": epoch_time
+            })
 
     return {
         "epoch": epochs[-1],
@@ -127,7 +157,7 @@ def save_model(model, optimizer, scheduler, epochs, losses, accuracies, args):
 
 # ----------------------------------------------------------------------
 @torch.no_grad()
-def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoch=-1):
+def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoch=-1, args=None):
     model.eval()
     base_model = accelerator.unwrap_model(model)   # ★ NEW
 
@@ -166,6 +196,13 @@ def val_model(model, data_loader_val, accelerator: Accelerator, accuracies, epoc
             f"[Epoch {epoch + 1}] Fragment‑acc: {acc_fragment:.2f}%   "
             f"Puzzle‑acc: {acc_puzzle:.2f}%"
         )
+
+    # Log validation metrics to wandb
+    if not args.disable_wandb and accelerator.is_main_process:
+        wandb.log({
+            "val/fragment_accuracy": acc_fragment.item(),
+            "val/puzzle_accuracy": acc_puzzle.item(),
+        })
 
     accuracies.append(acc_fragment.item())
     model.train(True)   # switch back to train mode

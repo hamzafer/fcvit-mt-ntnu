@@ -21,6 +21,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
+import wandb
 
 from util.datasets import build_dataset
 from puzzle_fcvit import FCViT
@@ -53,6 +54,11 @@ def get_args_parser():
                         help='resume from checkpoint')
     parser.add_argument('--data_path', default='./data/ImageNet/', type=str,
                         help='dataset path')
+
+    # WandB parameters
+    parser.add_argument("--wandb_offline", action="store_true", help="Run wandb in offline mode")
+    parser.add_argument("--disable_wandb", action="store_true", help="Disable wandb logging")
+
     return parser
 
 
@@ -99,10 +105,35 @@ def main(args):
         print(f'Parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
         print(f'Epoch: {epochs[-1]}')
 
+    if not args.disable_wandb:
+        wandb_mode = "offline" if args.wandb_offline else "online"
+        wandb.init(
+            project="fcvit",
+            entity="hamzafer3-ntnu",
+            name=f"eval_{args.backbone}_{args.num_fragment}frag",
+            job_type="evaluation",
+            mode=wandb_mode,
+            config=vars(args),
+            tags=["evaluation", args.backbone, f"{args.num_fragment}fragments"]
+        )
+
     if args.eval:
         test_stats = evaluate(data_loader_val, model, device)
         print(f"Accuracy (Fragment-level) of the network on the {len(dataset_val)} test images: {test_stats['acc_fragment']:.2f}%")
         print(f"Accuracy (Puzzle-level) of the network on the {len(dataset_val)} test images: {test_stats['acc_puzzle']:.2f}%")
+        final_fragment_acc = test_stats['acc_fragment']
+        final_puzzle_acc = test_stats['acc_puzzle']
+        total_samples = len(dataset_val)
+
+        if not args.disable_wandb:
+            wandb.log({
+                "eval/fragment_accuracy": final_fragment_acc,
+                "eval/puzzle_accuracy": final_puzzle_acc,
+                "eval/total_samples": total_samples,
+                "eval/model_path": args.resume
+            })
+            wandb.finish()
+
         exit(0)
 
 
