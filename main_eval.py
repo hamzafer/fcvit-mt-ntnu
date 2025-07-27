@@ -1,6 +1,27 @@
 # References:
 # DeiT: https://github.com/facebookresearch/deit
-# MAE: https://github.com/facebookresearch/mae
+# # MAE: https://github.com/facebookresearch/mae
+# first 10 epcoh: 
+# Accuracy (Fragment-level) of the network on the 50000 test images: 12.17%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 0.00%
+# first 20
+# Accuracy (Fragment-level) of the network on the 50000 test images: 14.33%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 0.00%
+# first 30
+# Accuracy (Fragment-level) of the network on the 50000 test images: 42.03%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 12.09%
+# first 40
+# Accuracy (Fragment-level) of the network on the 50000 test images: 63.97%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 36.42%
+# first 50
+# Accuracy (Fragment-level) of the network on the 50000 test images: 73.04%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 49.68%
+# first 70
+# Accuracy (Fragment-level) of the network on the 50000 test images: 80.50%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 62.07%
+# first 90
+# Accuracy (Fragment-level) of the network on the 50000 test images: 83.50%
+# Accuracy (Puzzle-level) of the network on the 50000 test images: 68.07%
 # --------------------------------------------------------
 
 
@@ -45,8 +66,7 @@ def get_args_parser():
 
 
 def main(args):
-    # device = torch.device(args.device)
-    device = 'cpu'
+    device = torch.device(args.device)
 
     seed = args.seed
     torch.manual_seed(seed)
@@ -79,9 +99,21 @@ def main(args):
         print(f'WARNING: The model is untrained.')
         print(f'WARNING: You need to check resume of args.')
     else:
-        checkpoint = torch.load(args.resume)
+        checkpoint = torch.load(args.resume, weights_only=False)
         epochs = checkpoint['epochs']
-        model.load_state_dict(checkpoint['model'])
+        
+        # Handle module prefix mismatch
+        state_dict = checkpoint['model']
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            if key.startswith('module.'):
+                # Remove 'module.' prefix
+                new_key = key[7:]
+            else:
+                new_key = key
+            new_state_dict[new_key] = value
+        
+        model.load_state_dict(new_state_dict)
         print(f'Parameter: {sum(p.numel() for p in model.parameters() if p.requires_grad)}')
         print(f'Epoch: {epochs[-1]}')
 
