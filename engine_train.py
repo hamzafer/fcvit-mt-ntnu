@@ -34,7 +34,8 @@ def training(
     print_freq = 10
     wandb_log_freq = 50  # Log to wandb every 50 steps
     
-    global_step = 0  # Track global training steps across all epochs
+    # ★ FIX: Calculate global step based on resumed epoch
+    global_step = args.start_epoch * len(data_loader_train)
 
     for epoch in range(args.start_epoch, args.epochs):
         epoch_start_time = time.time()

@@ -8,3 +8,4 @@ output_*/
 .history
 /results
 wandb/
+**/checkpoint*/

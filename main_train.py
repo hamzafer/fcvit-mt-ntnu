@@ -67,6 +67,8 @@ def get_args_parser():
                         help="wandb run name (auto-generated if not provided)")
     parser.add_argument("--disable_wandb", action="store_true",
                         help="Disable wandb logging entirely")
+    parser.add_argument("--wandb_resume_id", default=None, type=str,
+                        help="WandB run ID to resume from (e.g., xeq2kbd5)")
 
     return parser
 
@@ -87,54 +89,67 @@ def main(args):
         # Set wandb mode
         wandb_mode = "offline" if args.wandb_offline else "online"
         
-        # Create run name if not provided
-        if args.wandb_run_name is None:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        if args.wandb_resume_id:
+            # Resume existing run
+            wandb_run = wandb.init(
+                project="fcvit",
+                entity="hamzafer3-ntnu",
+                id=args.wandb_resume_id,
+                resume="must",
+                mode=wandb_mode,
+            )
+            print(f"Resuming WandB run: {args.wandb_resume_id}")
+        else:
+            # Create new run (existing logic)
+            # Create run name if not provided
+            if args.wandb_run_name is None:
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                
+                # Extract dataset name from data_path
+                dataset_name = "unknown"
+                if args.data_path:
+                    if "imagenet" in args.data_path.lower():
+                        dataset_name = "imagenet"
+                    elif "coco" in args.data_path.lower():
+                        dataset_name = "coco"
+                    elif "places" in args.data_path.lower():
+                        dataset_name = "places"
+                    elif "fake" in args.data_path.lower() or args.smoke_test:
+                        dataset_name = "fake"
+                    else:
+                        # Extract last folder name as dataset name
+                        dataset_name = os.path.basename(args.data_path.rstrip('/'))
+                
+                if args.smoke_test:
+                    dataset_name = "smoke_test"
+                
+                # Create descriptive run name
+                backbone_short = args.backbone.replace("vit_", "").replace("_patch16_224", "")
+                fragments_str = f"{args.num_fragment}frag"
+                puzzle_size = f"{args.size_puzzle}px"
+                batch_lr = f"bs{args.batch_size}_lr{args.lr}"
+                
+                args.wandb_run_name = f"{dataset_name}_{backbone_short}_{fragments_str}_{puzzle_size}_{batch_lr}_{timestamp}"
             
-            # Extract dataset name from data_path
-            dataset_name = "unknown"
-            if args.data_path:
-                if "imagenet" in args.data_path.lower():
-                    dataset_name = "imagenet"
-                elif "coco" in args.data_path.lower():
-                    dataset_name = "coco"
-                elif "places" in args.data_path.lower():
-                    dataset_name = "places"
-                elif "fake" in args.data_path.lower() or args.smoke_test:
-                    dataset_name = "fake"
-                else:
-                    # Extract last folder name as dataset name
-                    dataset_name = os.path.basename(args.data_path.rstrip('/'))
-            
-            if args.smoke_test:
-                dataset_name = "smoke_test"
-            
-            # Create descriptive run name
-            backbone_short = args.backbone.replace("vit_", "").replace("_patch16_224", "")
-            fragments_str = f"{args.num_fragment}frag"
-            puzzle_size = f"{args.size_puzzle}px"
-            batch_lr = f"bs{args.batch_size}_lr{args.lr}"
-            
-            args.wandb_run_name = f"{dataset_name}_{backbone_short}_{fragments_str}_{puzzle_size}_{batch_lr}_{timestamp}"
-        
-        # Initialize wandb with your project
-        wandb_run = wandb.init(
-            project="fcvit",
-            entity="hamzafer3-ntnu",
-            name=args.wandb_run_name,
-            config=vars(args),
-            mode=wandb_mode,
-            tags=[
-                args.backbone, 
-                f"{args.num_fragment}fragments", 
-                "jigsaw-puzzle",
-                dataset_name,
-                "smoke-test" if args.smoke_test else "full-training"
-            ]
-        )
+            # Initialize wandb with your project
+            wandb_run = wandb.init(
+                project="fcvit",
+                entity="hamzafer3-ntnu",
+                name=args.wandb_run_name,
+                config=vars(args),
+                mode=wandb_mode,
+                tags=[
+                    args.backbone, 
+                    f"{args.num_fragment}fragments", 
+                    "jigsaw-puzzle",
+                    dataset_name,
+                    "smoke-test" if args.smoke_test else "full-training"
+                ]
+            )
         
         print(f"WandB initialized in {wandb_mode} mode")
-        print(f"Run name: {args.wandb_run_name}")
+        if not args.wandb_resume_id:
+            print(f"Run name: {args.wandb_run_name}")
         print(f"Project: https://wandb.ai/hamzafer3-ntnu/fcvit")
         print(f"Direct run link: https://wandb.ai/hamzafer3-ntnu/fcvit/runs/{wandb_run.id}")
 
@@ -190,7 +205,17 @@ def main(args):
     epochs, losses, accuracies = [0], [0], [0]
     if args.resume:
         checkpoint = torch.load(args.resume, map_location="cpu")
-        model.load_state_dict(checkpoint["model"])
+        
+        # ★ FIX: Handle state dict key mismatch (remove 'module.' prefix)
+        state_dict = checkpoint["model"]
+        new_state_dict = {}
+        for k, v in state_dict.items():
+            if k.startswith('module.'):
+                new_state_dict[k[7:]] = v  # Remove 'module.' prefix
+            else:
+                new_state_dict[k] = v
+        
+        model.load_state_dict(new_state_dict)
         optimizer.load_state_dict(checkpoint["optimizer"])
         epochs = checkpoint["epochs"]
         losses = checkpoint["losses"]
@@ -207,6 +232,24 @@ def main(args):
     ) = accelerator.prepare(data_loader_train, data_loader_val, model, optimizer)  # ★ NEW
 
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs)
+    
+    if args.resume:
+        # Check if this is initial fine-tuning or continued fine-tuning
+        if args.start_epoch == 0:
+            # Initial fine-tuning from ImageNet
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = args.lr
+            print(f"Initial fine-tuning: Reset learning rate to {args.lr}")
+        else:
+            # Continued fine-tuning - use lower LR or keep existing
+            continued_lr = args.lr * 0.3  # 30% of original LR
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = continued_lr
+            print(f"Continued fine-tuning: Set learning rate to {continued_lr}")
+        
+        remaining_epochs = args.epochs - args.start_epoch
+        scheduler = CosineAnnealingLR(optimizer, T_max=remaining_epochs)
+        print(f"Created new scheduler for remaining {remaining_epochs} epochs")
 
     print(f"Total trainable params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
